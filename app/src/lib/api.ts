@@ -1,6 +1,7 @@
 // ── API helpers for external data sources ──
 
 const TIMEOUT = 10_000;
+const IS_DEV = import.meta.env.DEV;
 
 async function fetchWithTimeout(
   url: string,
@@ -14,6 +15,21 @@ async function fetchWithTimeout(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * In dev: use Vite proxy (/api/met/..., /api/entur/...).
+ * In prod: use Vercel edge function (/api/proxy?target=...&path=...).
+ */
+function proxyUrl(target: string, path: string): string {
+  if (IS_DEV) {
+    return `/api/${target}${path}`;
+  }
+  return `/api/proxy?target=${target}&path=${encodeURIComponent(path)}`;
+}
+
+function proxyFetch(target: string, path: string, opts: RequestInit = {}): Promise<Response> {
+  return fetchWithTimeout(proxyUrl(target, path), opts);
 }
 
 // ── Geonorge address search ──
@@ -56,9 +72,9 @@ export async function fetchLuftkvalitet(
   lat: number,
   lon: number,
 ): Promise<LuftkvalitetData | null> {
-  const res = await fetchWithTimeout(
-    `/api/met/weatherapi/airqualityforecast/0.1/?lat=${lat}&lon=${lon}`,
-    { headers: { "User-Agent": "klarning-eiendom/1.0" } },
+  const res = await proxyFetch(
+    "met",
+    `/weatherapi/airqualityforecast/0.1/?lat=${lat}&lon=${lon}`,
   );
   if (!res.ok) return null;
   const data = await res.json();
@@ -96,9 +112,9 @@ export async function fetchEnturHoldeplasser(
   lat: number,
   lon: number,
 ): Promise<EnturStop[]> {
-  const res = await fetchWithTimeout(
-    `/api/entur/geocoder/v1/reverse?point.lat=${lat}&point.lon=${lon}&size=10&layers=venue`,
-    { headers: { "ET-Client-Name": "klarning-eiendom" } },
+  const res = await proxyFetch(
+    "entur",
+    `/geocoder/v1/reverse?point.lat=${lat}&point.lon=${lon}&size=10&layers=venue`,
   );
   if (!res.ok) return [];
   const data = await res.json();
@@ -137,24 +153,6 @@ export interface OverpassPOI {
   brand?: string;
 }
 
-async function overpassQuery(query: string): Promise<OverpassPOI[]> {
-  const res = await fetchWithTimeout(`/api/overpass/api/interpreter`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `data=${encodeURIComponent(query)}`,
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data.elements ?? []).map(
-    (e: { tags?: { name?: string; brand?: string }; lat: number; lon: number; center?: { lat: number; lon: number } }) => ({
-      name: e.tags?.name ?? "Uten navn",
-      brand: e.tags?.brand,
-      lat: e.lat ?? e.center?.lat ?? 0,
-      lon: e.lon ?? e.center?.lon ?? 0,
-    }),
-  );
-}
-
 export async function fetchOverpassNearby(
   lat: number,
   lon: number,
@@ -174,7 +172,7 @@ export async function fetchOverpassNearby(
     .barnehager out body;
     .restauranter out body;`;
 
-  const res = await fetchWithTimeout(`/api/overpass/api/interpreter`, {
+  const res = await proxyFetch("overpass", `/api/interpreter`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: `data=${encodeURIComponent(combinedQuery)}`,
@@ -218,7 +216,7 @@ export async function fetchTrafikktall(
       location { coordinates { latLon { lat lon } } }
     }
   }`;
-  const pRes = await fetchWithTimeout(`/api/vegvesen/`, {
+  const pRes = await proxyFetch("vegvesen", `/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query: pointsQuery }),
@@ -255,7 +253,7 @@ export async function fetchTrafikktall(
       }}}}
     }
   }`;
-  const aRes = await fetchWithTimeout(`/api/vegvesen/`, {
+  const aRes = await proxyFetch("vegvesen", `/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query: adtQuery }),

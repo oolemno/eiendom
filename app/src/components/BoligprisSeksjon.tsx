@@ -65,8 +65,8 @@ export function BoligprisSeksjon({ ssb }: { ssb: SSBData | null }) {
               width={35}
             />
             <Tooltip
-              formatter={(v: number) => [
-                `${v.toLocaleString("nb-NO")} kr/m²`,
+              formatter={(v) => [
+                `${Number(v).toLocaleString("nb-NO")} kr/m²`,
                 "Pris",
               ]}
               contentStyle={{ fontSize: 12 }}

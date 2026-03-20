@@ -4,8 +4,8 @@
  * Avoids SSBClient/SSBCache which depend on node:fs and node:crypto.
  */
 
-import { parseJsonStat2 } from "../../../../ssb-motor/src/parser.ts";
-import { buildQuery } from "../../../../ssb-motor/src/query-builder.ts";
+import { parseJsonStat2 } from "./ssb-browser/parser.ts";
+import { buildQuery } from "./ssb-browser/query-builder.ts";
 
 const SSB_BASE = "https://data.ssb.no/api/v0/no/table";
 
