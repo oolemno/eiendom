@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap");
+
+body {
+  margin: 0;
+  font-family: "Outfit", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-outfit {
+  font-family: "Outfit", sans-serif;
+}
+
+/* Leaflet container fix */
+.leaflet-container {
+  font-family: inherit;
+}
